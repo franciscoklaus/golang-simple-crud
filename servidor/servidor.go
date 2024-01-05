@@ -3,9 +3,11 @@ package servidor
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
 	"gtihub.com/franciscoklaus/golango-simple-crud/banco"
 	"io"
 	"net/http"
+	"strconv"
 )
 
 type Usuario struct {
@@ -56,4 +58,34 @@ func CriarUsuario(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(fmt.Sprintf("Usuario inserido com sucesso! Id: %d", idInserido)))
 
+}
+
+// REMOVE USUARIO DO BANCO DE DADOS
+func DeletarUsuario(w http.ResponseWriter, r *http.Request) {
+	parametros := mux.Vars(r)
+	ID, err := strconv.ParseUint(parametros["id"], 10, 32)
+	if err != nil {
+		w.Write([]byte("Erro ao converter o parâmetro para inteiro!"))
+		return
+	}
+	db, err := banco.Conectar()
+	if err != nil {
+		w.Write([]byte("Erro ao conectar no banco de dados!"))
+		return
+	}
+	defer db.Close()
+	statement, err := db.Prepare("DELETE FROM usuarios where id = ?")
+	if err != nil {
+		w.Write([]byte("Erro ao criar o statement!"))
+		return
+	}
+
+	defer statement.Close()
+
+	if _, err := statement.Exec(ID); err != nil {
+		w.Write([]byte("Erro ao deletar o usuário!"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Usuário deletado com sucesso do banco de dados!"))
 }
